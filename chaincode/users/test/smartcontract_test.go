@@ -18,31 +18,38 @@ import (
 
 var Stub *shimtest.MockStub
 var Scc *contractapi.ContractChaincode
+
 var user1 smartcontract.User = smartcontract.User{
-	ID:    "1",
-	Name:  "John Lee",
-	Email: "john.lee@g.com",
+	Name:   "New John Lee",
+	Id_key: "A222333444",
+	Email:  "AAAA@bbb.com",
 }
+
 var user2 smartcontract.User = smartcontract.User{
-	ID:    "2",
-	Name:  "Amy Lin",
-	Email: "amy.lin@g.com",
+	Name:   "Benny Cheng",
+	Id_key: "B444555666",
+	Email:  "CCCCC@bbb.com",
 }
 
 var transaction1 smartcontract.Transaction = smartcontract.Transaction{
-	Hash:      "0x000000001",
-	Amount:    "200",
-	Currency:  "USD",
-	Date:      "2022-04-14",
-	BankId: "04231910",
+	Hash:          "0x000000001",
+	Amount:        "200",
+	Currency_type: "USD",
+	Create_at:     "1735349527123456789",
 }
 
 var transaction2 smartcontract.Transaction = smartcontract.Transaction{
-	Hash:      "0x000000002",
-	Amount:    "500",
-	Currency:  "NTD",
-	Date:      "2022-04-16",
-	BankId: "04231910",
+	Hash:          "0x000000002",
+	Amount:        "300",
+	Currency_type: "NTD",
+	Create_at:     "1735349527123456789",
+}
+
+var transaction3 smartcontract.Transaction = smartcontract.Transaction{
+	Hash:          "0x000000003",
+	Amount:        "600",
+	Currency_type: "GBP",
+	Create_at:     "1735349527123456789",
 }
 
 func TestMain(m *testing.M) {
@@ -65,122 +72,162 @@ func NewStub() {
 	MockInitLedger()
 }
 
+func Test_getUserList(t *testing.T) {
+	fmt.Println("MockGetUserList-----------------")
+	NewStub()
+
+	MockCreateUser(user1.Id_key, user1.Name, user1.Email)
+
+	MockCreateUser(user2.Id_key, user2.Name, user2.Email)
+
+	result1, err := MockCreateTransaction(user1.Id_key, transaction1.Hash, transaction1.Amount, transaction1.Currency_type, transaction1.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+	fmt.Println("CreateTransaction transaction1", result1)
+
+	users, err := MockGetUserList()
+	if err != nil {
+		fmt.Println("GetUserList error", err)
+	}
+	fmt.Println(users)
+
+	assert.Equal(t, len(users), 3)
+
+}
+
 func Test_CreateUser(t *testing.T) {
 	fmt.Println("Test_CreateUser-----------------")
 	NewStub()
 
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
-	if err != nil {
-		t.FailNow()
-	}
-}
-
-func Test_UserExists(t *testing.T) {
-	fmt.Println("Test_UserExists-----------------")
-	NewStub()
-
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
+	err := MockCreateUser(user1.Id_key, user1.Name, user1.Email)
 	if err != nil {
 		t.FailNow()
 	}
 
-	result, err := MockUserExists(user1.ID)
-	if err != nil {
-		t.FailNow()
-	}
-	assert.Equal(t, result, true)
-}
-
-func Test_GetUser(t *testing.T) {
-	fmt.Println("Test_GetUser-----------------")
-	NewStub()
-
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
-	if err != nil {
+	//這邊會因為重複新增同一個人而報錯
+	err2 := MockCreateUser(user1.Id_key, user1.Name, user1.Email)
+	if err2 != nil {
 		t.FailNow()
 	}
 
-	userJson, err := MockGetUser(user1.ID)
-	if err != nil {
-		fmt.Println("get User error", err)
-	}
-
-	assert.Equal(t, userJson.ID, user1.ID)
-	assert.Equal(t, userJson.Name, user1.Name)
-	assert.Equal(t, userJson.Email, user1.Email)
 }
 
 func Test_UpdateUser(t *testing.T) {
 	fmt.Println("Test_UpdateUser-----------------")
 	NewStub()
 
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
+	err := MockCreateUser(user1.Id_key, user1.Name, user1.Email)
 	if err != nil {
 		t.FailNow()
 	}
 
-	MockUpdateUser(user1.ID, "change name", "change email")
-
-	userJson, err := MockGetUser(user1.ID)
+	BfUsers, err := MockGetUserList()
 	if err != nil {
-		fmt.Println("get User", err)
+		fmt.Println("GetUserList error", err)
 	}
+	fmt.Println("BEFORE ::", BfUsers)
 
-	assert.Equal(t, userJson.ID, user1.ID)
-	assert.Equal(t, userJson.Name, "change name")
-	assert.Equal(t, userJson.Email, "change email")
+	newName := "Ariel AAA"
+	newEmail := "IhaveChanged@com"
+
+	MockUpdateUser(user1.Id_key, newName, newEmail)
+
+	AfUsers, err := MockGetUserList()
+	fmt.Println("AFTER ::", AfUsers)
+
+	userJson, err := MockGetUserAndTransactions(user1.Id_key)
+
+	assert.Equal(t, userJson.Id_key, user1.Id_key)
+	assert.Equal(t, userJson.Name, newName)
+	assert.Equal(t, userJson.Email, newEmail)
 
 }
 
-func Test_DeleteUser(t *testing.T) {
-	fmt.Println("Test_DeleteUser-----------------")
+func Test_TransactionHashExist(t *testing.T) {
+	fmt.Println("Test_TransactionHashExist-----------------")
 	NewStub()
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
+
+	err := MockCreateUser(user1.Id_key, user1.Name, user1.Email)
 	if err != nil {
 		t.FailNow()
 	}
 
-	MockDeleteUser(user1.ID)
-
-	userJson, err := MockGetUser(user1.ID)
+	result1, err := MockCreateTransaction(user1.Id_key, transaction1.Hash, transaction1.Amount, transaction1.Currency_type, transaction1.Create_at)
 	if err != nil {
-		fmt.Println("get User", err)
+		fmt.Println("CreateTransaction User", err)
 	}
-	fmt.Println(userJson)
-	assert.Equal(t, err, errors.New("GetUser error"))
+	fmt.Println("CreateTransaction transaction1", result1)
+
+	result2, err := MockCreateTransaction(user1.Id_key, transaction2.Hash, transaction2.Amount, transaction2.Currency_type, transaction2.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+
+	fmt.Println("CreateTransaction transaction2", result2)
+
+	result3, err := MockCreateTransaction(user1.Id_key, transaction3.Hash, transaction3.Amount, transaction3.Currency_type, transaction3.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+	fmt.Println("CreateTransaction transaction2", result3)
+
+	TransactionCheckResult, err := MockGetUserByTransactionHash(transaction1.Hash)
+	fmt.Print(TransactionCheckResult)
+
+	falseHash := "AABBCCD"
+	TransactionCheckResult2, err := MockGetUserByTransactionHash(falseHash)
+	if err != nil {
+		fmt.Println("get TransactionCheckResult2", falseHash, "error", err)
+		fmt.Print(TransactionCheckResult2)
+
+		t.FailNow()
+
+	}
+
 }
 
-func Test_GetAllUsers(t *testing.T) {
-	fmt.Println("MockGetAllUsers-----------------")
+func Test_CreateTransaction(t *testing.T) {
+	fmt.Println("CreateTransaction-----------------")
 	NewStub()
-
-	MockCreateUser(user1.ID, user1.Name, user1.Email)
-	MockCreateUser(user2.ID, user2.Name, user2.Email)
-
-	users, err := MockGetAllUsers()
+	err := MockCreateUser(user1.Id_key, user1.Name, user1.Email)
 	if err != nil {
-		fmt.Println("GetAllUsers error", err)
+		t.FailNow()
 	}
-	fmt.Println(users)
+	result1, err := MockCreateTransaction(user1.Id_key, transaction1.Hash, transaction1.Amount, transaction1.Currency_type, transaction1.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+	fmt.Println("CreateTransaction transaction1", result1)
 
-	assert.Equal(t, len(users), 2)
+	result2, err := MockCreateTransaction(user1.Id_key, transaction2.Hash, transaction2.Amount, transaction2.Currency_type, transaction2.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+
+	fmt.Println("CreateTransaction transaction2", result2)
+
+	result3, err := MockCreateTransaction(user1.Id_key, transaction3.Hash, transaction3.Amount, transaction3.Currency_type, transaction3.Create_at)
+	if err != nil {
+		fmt.Println("CreateTransaction User", err)
+	}
+	fmt.Println("CreateTransaction transaction2", result3)
+
+	user, err := MockGetUserAndTransactions(user1.Id_key)
+	if err != nil {
+		fmt.Println("get User error", err)
+	}
+
+	fmt.Println(user)
+	assert.Equal(t, len(user.Transactions), 3)
+
 }
 
-func MockUserExists(id string) (bool, error) {
-	res := Stub.MockInvoke("uuid", [][]byte{[]byte("UserExists"), []byte(id)})
-	if res.Status != shim.OK {
-		return false, errors.New("UserExists error")
-	}
-	var result bool = false
-	json.Unmarshal(res.Payload, &result)
-	return result, nil
-}
-
-func MockCreateUser(id string, name string, email string) error {
+func MockCreateUser(Id_key string, name string, email string) error {
 	res := Stub.MockInvoke("uuid",
 		[][]byte{
 			[]byte("CreateUser"),
-			[]byte(id),
+			[]byte(Id_key),
 			[]byte(name),
 			[]byte(email),
 		})
@@ -192,19 +239,15 @@ func MockCreateUser(id string, name string, email string) error {
 	return nil
 }
 
-func MockGetUser(id string) (*smartcontract.User, error) {
-	var result smartcontract.User
-	res := Stub.MockInvoke("uuid",
-		[][]byte{
-			[]byte("GetUser"),
-			[]byte(id),
-		})
+func MockGetUserList() ([]*smartcontract.User, error) {
+	res := Stub.MockInvoke("uuid", [][]byte{[]byte("GetUserList")})
 	if res.Status != shim.OK {
-		fmt.Println("GetUser failed", string(res.Message))
-		return nil, errors.New("GetUser error")
+		fmt.Println("GetUserList failed", string(res.Message))
+		return nil, errors.New("GetUserList error")
 	}
-	json.Unmarshal(res.Payload, &result)
-	return &result, nil
+	var users []*smartcontract.User
+	json.Unmarshal(res.Payload, &users)
+	return users, nil
 }
 
 func MockUpdateUser(id string, name string, email string) error {
@@ -222,71 +265,30 @@ func MockUpdateUser(id string, name string, email string) error {
 	return nil
 }
 
-func MockDeleteUser(id string) error {
+func MockGetUserAndTransactions(id string) (*smartcontract.User, error) {
+	var result smartcontract.User
 	res := Stub.MockInvoke("uuid",
 		[][]byte{
-			[]byte("DeleteUser"),
+			[]byte("GetUserAndTransactions"),
 			[]byte(id),
 		})
 	if res.Status != shim.OK {
-		fmt.Println("DeleteUser failed", string(res.Message))
-		return errors.New("DeleteUser error")
+		fmt.Println("GetUserAndTransactions failed", string(res.Message))
+		return nil, errors.New("GetUserAndTransactions error")
 	}
-	return nil
+	json.Unmarshal(res.Payload, &result)
+	return &result, nil
 }
 
-func MockGetAllUsers() ([]*smartcontract.User, error) {
-	res := Stub.MockInvoke("uuid", [][]byte{[]byte("GetAllUsers")})
-	if res.Status != shim.OK {
-		fmt.Println("GetAllUsers failed", string(res.Message))
-		return nil, errors.New("GetAllUsers error")
-	}
-	var users []*smartcontract.User
-	json.Unmarshal(res.Payload, &users)
-	return users, nil
-}
-
-
-
-func Test_CreateTransaction(t *testing.T) {
-	fmt.Println("CreateTransaction-----------------")
-	NewStub()
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
-	if err != nil {
-		t.FailNow()
-	}
-	result1, err := MockCreateTransaction(user1.ID, transaction1.Hash, transaction1.Amount, transaction1.Currency, transaction1.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction1", result1)
-
-	result2, err := MockCreateTransaction(user1.ID, transaction2.Hash, transaction2.Amount, transaction2.Currency, transaction2.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction2", result2)
-
-	user, err := MockGetUser(user1.ID)
-	if err != nil {
-		fmt.Println("get User error", err)
-	}
-	
-	fmt.Println(user)
-	assert.Equal(t, len(user.Transactions), 2)
-
-}
-
-func MockCreateTransaction(userId string, hash string, amount string, currency string, date string, bankId string) (bool, error) {
+func MockCreateTransaction(Id_key string, hash string, amount string, currency_type string, create_at string) (bool, error) {
 	res := Stub.MockInvoke("uuid",
 		[][]byte{
 			[]byte("CreateTransaction"),
-			[]byte(userId),
+			[]byte(Id_key),
 			[]byte(hash),
 			[]byte(amount),
-			[]byte(currency),
-			[]byte(date),
-			[]byte(bankId),
+			[]byte(currency_type),
+			[]byte(create_at),
 		})
 	if res.Status != shim.OK {
 		fmt.Println("CreateTransaction failed", string(res.Message))
@@ -297,129 +299,29 @@ func MockCreateTransaction(userId string, hash string, amount string, currency s
 	return result, nil
 }
 
-// Part 2
-
-func Test_GetUserByTransactionHash(t *testing.T) {
-	fmt.Println("GetUserByTransactionHash-----------------")
-	NewStub()
-	err1 := MockCreateUser(user1.ID, user1.Name, user1.Email)
-	if err1 != nil {
-		t.FailNow()
-	}
-
-	err2 := MockCreateUser(user2.ID, user2.Name, user2.Email)
-	if err2 != nil {
-		t.FailNow()
-	}
-
-	result1, err := MockCreateTransaction(user1.ID, transaction1.Hash, transaction1.Amount, transaction1.Currency, transaction1.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction1", result1)
-
-	result2, err := MockCreateTransaction(user2.ID, transaction2.Hash, transaction2.Amount, transaction2.Currency, transaction2.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction2", result2)
-
-	mockUser1, err := MockGetUserByTransactionHash(transaction1.Hash)
-	if err != nil {
-		fmt.Println("get User error", err)
-	}
-
-	mockUser2, err := MockGetUserByTransactionHash(transaction2.Hash)
-	if err != nil {
-		fmt.Println("get User error", err)
-	}
-	
-	assert.Equal(t, mockUser1.ID, user1.ID)
-	assert.Equal(t, mockUser1.Name, user1.Name)
-	assert.Equal(t, mockUser1.Email, user1.Email)
-	assert.Equal(t, mockUser2.ID, user2.ID)
-	assert.Equal(t, mockUser2.Name, user2.Name)
-	assert.Equal(t, mockUser2.Email, user2.Email)
-
-
-}
-
 func MockGetUserByTransactionHash(hash string) (*smartcontract.User, error) {
 	var result smartcontract.User
 	res := Stub.MockInvoke("uuid",
 		[][]byte{
-			[]byte("GetUserByTransactionHash"),
+			[]byte("TransactionHashExist"),
 			[]byte(hash),
 		})
-		if res.Status != shim.OK {
-			fmt.Println("GetUserByTransactionHash failed", string(res.Message))
-			return nil, errors.New("GetUserByTransactionHash error")
-		}
-		json.Unmarshal(res.Payload, &result)
-		return &result, nil
-}
-
-// part 3
-
-func MockInitLedger() (error) {
-	res := Stub.MockInvoke("uuid",
-		[][]byte{
-			[]byte("InitLedger"),
-		})
-		if res.Status != shim.OK {
-			fmt.Println("MockInitLedger failed", string(res.Message))
-			return errors.New("MockInitLedger error")
-		}
-		return nil
-}
-
-func MockGetBankByID(bankId string) (*smartcontract.Bank, error) {
-	var result smartcontract.Bank
-	res := Stub.MockInvoke("uuid",
-		[][]byte{
-			[]byte("GetBankByID"),
-			[]byte(bankId),
-		})
 	if res.Status != shim.OK {
-		fmt.Println("GetBankByID failed", string(res.Message))
-		return nil, errors.New("GetBankByID error")
+		fmt.Println("TransactionHashExist failed", string(res.Message))
+		return nil, errors.New("TransactionHashExist error")
 	}
 	json.Unmarshal(res.Payload, &result)
 	return &result, nil
 }
 
-// func Test_InitLedger(t *testing.T) {
-// 	fmt.Println("InitLedger-----------------")
-// 	NewStub()
-// 	var err = MockInitLedger()
-// 	assert.Equal(t, err, nil)
-// }
-
-func Test_BankTransactionCount(t *testing.T) {
-	fmt.Println("BankTransactionCount-----------------")
-	NewStub()
-	err := MockCreateUser(user1.ID, user1.Name, user1.Email)
-	if err != nil {
-		t.FailNow()
+func MockInitLedger() error {
+	res := Stub.MockInvoke("uuid",
+		[][]byte{
+			[]byte("InitLedger"),
+		})
+	if res.Status != shim.OK {
+		fmt.Println("MockInitLedger failed", string(res.Message))
+		return errors.New("MockInitLedger error")
 	}
-	result1, err := MockCreateTransaction(user1.ID, transaction1.Hash, transaction1.Amount, transaction1.Currency, transaction1.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction1", result1)
-
-	result2, err := MockCreateTransaction(user1.ID, transaction2.Hash, transaction2.Amount, transaction2.Currency, transaction2.Date, transaction1.BankId)
-	if err != nil {
-		fmt.Println("CreateTransaction User", err)
-	}
-	fmt.Println("CreateTransaction transaction2", result2)
-
-	bank, err := MockGetBankByID(transaction1.BankId)
-	if err != nil {
-		fmt.Println("get bank error", err)
-	}
-	
-	fmt.Println(bank)
-	assert.Equal(t, bank.TransactionCount, 2)
-
+	return nil
 }
