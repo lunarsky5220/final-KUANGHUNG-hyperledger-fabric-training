@@ -92,7 +92,7 @@ func Test_getUserList(t *testing.T) {
 	}
 	fmt.Println(users)
 
-	assert.Equal(t, len(users), 3)
+	assert.Equal(t, len(users), 2)
 
 }
 
@@ -184,6 +184,18 @@ func Test_TransactionHashExist(t *testing.T) {
 		t.FailNow()
 
 	}
+
+	trueHash := "AABBCCD"
+	TransactionCheckResult2, err := MockGetUserByTransactionHash(falseHash)
+	if err != nil {
+		fmt.Println("get TransactionCheckResult2", falseHash, "error", err)
+		fmt.Print(TransactionCheckResult2)
+
+		t.FailNow()
+
+	}
+
+
 
 }
 

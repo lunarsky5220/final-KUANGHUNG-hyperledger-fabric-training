@@ -58,7 +58,7 @@ func (s *SmartContract) GetUserList(ctx contractapi.TransactionContextInterface)
 
 	//resultsIterator, err := ctx.GetStub().GetStateByRange("0", "99999")
 	//按照 字典序 取 [startKey, endKey) 範圍的 key ("","") 代表無邊界取所有值
-	resultsIterator, err := ctx.GetStub().GetStateByRange("", "")
+	resultsIterator, err := ctx.GetStub().GetStateByRange("", "hash_")
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (s *SmartContract) UpdateUser(ctx contractapi.TransactionContextInterface, 
 }
 
 func (s *SmartContract) TransactionHashExist(ctx contractapi.TransactionContextInterface, hash string) (*User, error) {
-	userJson, err := ctx.GetStub().GetState(hash)
+	userJson, err := ctx.GetStub().GetState("hash_"+hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read from world state: %v", err)
 	}
@@ -190,6 +190,6 @@ func (s *SmartContract) CreateTransaction(ctx contractapi.TransactionContextInte
 		return false, err
 	}
 
-	ctx.GetStub().PutState(hash, transactionHashMapUserIdJson)
+	ctx.GetStub().PutState("hash_"+hash, transactionHashMapUserIdJson)
 	return true, nil
 }
